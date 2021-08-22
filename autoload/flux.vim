@@ -45,36 +45,33 @@ fu! s:proj.load() "{
 
   for self.i in range(len(self.lines))
 
-    let self.line = self.lines[self.i]
+    let line = self.lines[self.i]
 
-    let comment = match(self.line,'#')
-    if comment + 1|let self.line = self.line[0:comment-1]|endif
-    let self.line = trim(self.line)
+    let comment = match(line,'#')
+    if comment + 1|let line = line[0:comment-1]|endif
+    let line = trim(line)
 
-    if !empty(matchstr(self.line,'^\s*---.*$'))|break|endif
-    if  empty(self.line)|continue|endif
+    if !empty(matchstr(line,'^\s*---.*$'))|break|endif
+    if  empty(line)|continue|endif
 
     " Project File 'name' {
 
-    let self.pattern = s:rgex.proj.name
-    let self.match = matchlist(self.line,self.pattern)
-    let disabled  = trim(get(self.match,1)) == '-'
+    let self.match = matchlist(line,s:rgex.proj.name)
+    let disabled   = trim(get(self.match,1)) == '-'
     if !disabled|let self.tree.name=get(self.match,2,self.tree.name)|endif
 
     " }
     " Project File 'root' {
 
-    let self.pattern = s:rgex.proj.root
-    let self.match = matchlist(self.line,self.pattern)
-    let disabled  = trim(get(self.match,1)) == '-'
+    let self.match = matchlist(line,s:rgex.proj.root)
+    let disabled   = trim(get(self.match,1)) == '-'
     if !disabled|let self.tree.root=get(self.match,2,self.tree.root)|endif
 
     " }
     " Project File 'proj' {
 
-    let self.pattern = s:rgex.proj.proj
-    let self.match = matchlist(self.line,self.pattern)
-    let disabled     = trim(get(self.match,1)) == '-'
+    let self.match = matchlist(line,s:rgex.proj.proj)
+    let disabled   = trim(get(self.match,1)) == '-'
 
     if !disabled && !empty(self.match)|call self.proj()|endif
 
@@ -105,6 +102,8 @@ fu! s:proj.proj() "{
     endif
   endfor
 
+  unlet self.p
+
   let self.tree.list+= [node]
 
 endf "}
@@ -125,6 +124,8 @@ fu! s:proj.wksp() "{
       call add(node.list,self.tabs())
     endif
   endfor
+
+  unlet self.w
 
   return node
 
@@ -152,6 +153,8 @@ fu! s:proj.tabs() "{
     endif
   endfor
 
+  unlet self.t
+
   return node
 
 endf "}
@@ -173,22 +176,6 @@ fu! s:proj.term() "{
   let node.comm  = (len(self.match)>=2)?trim(self.match[1]):''
 
   return node
-
-endf "}
-fu! s:proj.show() "{
-
-  for key in keys(self.tree)
-    if type(self.tree[key]) == v:t_string
-      echo "'".key."'" ':' "'".self.tree[key]."'"
-    elseif key == 'list'
-      echo "'".key."'" ':'
-      for item in self.tree[key]
-        echo ' ' item
-      endfor
-    else
-      echo "'".key."'" ':' "'".self.tree[key]."'"
-    endif
-  endfor
 
 endf "}
 
