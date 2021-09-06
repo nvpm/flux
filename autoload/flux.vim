@@ -6,210 +6,247 @@ if !NVPMTEST&&exists('FLUXAUTOLOAD')|finish|else|let FLUXAUTOLOAD=1|endif
 " end-once}
 " priv {
 
-let s:rgex = {}
-
-let s:rgex.proj = {}
-let s:rgex.proj.name = '^\s*\(-*\)\s*name\s*\(.*\)'
-let s:rgex.proj.root = '^\s*\(-*\)\s*root\s*\(.*\)'
-let s:rgex.proj.proj = '^\s*\(-*\)\s*\%(project\|proj\|pj\)\s*\(.*\)'
-let s:rgex.proj.wksp = '^\s*\(-*\)\s*\%(workspace\|area\|ws\)\s*\(.*\)'
-let s:rgex.proj.tabs = '^\s*\(-*\)\s*\%(tab\|slot\|tb\)\s*\(.*\)'
-let s:rgex.proj.file = '^\s*\(-*\)\s*\%(file\|buff\|bf\)\s*\(.*\)'
-let s:rgex.proj.term = '^\s*\(-*\)\s*\%(terminal\|term\|tm\)\s*\(.*\)'
-
-let s:rgex.line = {}
-let s:rgex.iris = {}
-let s:rgex.imux = {}
+let s:flux = {}
+let s:flux.path = ''
+let s:flux.synx = ''
+let s:flux.file = []
+let s:flux.leng = 0
+let s:flux.match = []
 
 " }
 " publ {
 
-" proj plugin syntax {
-
 let s:proj = {}
+let s:proj.rgex = {}
+let s:proj.rgex.name='^\(-*\)\s*\(name\)\s*\(.*\)'
+let s:proj.rgex.root='^\(-*\)\s*\(root\)\s*\(.*\)'
+let s:proj.rgex.proj='^\(-*\)\s*\%(layout\|project\|proj\|pj\)\s*\(.*\)'
+let s:proj.rgex.wksp='^\(-*\)\s*\%(workplace\|workspace\|area\|ws\)\s*\(.*\)'
+let s:proj.rgex.slot='^\(-*\)\s*\%(tab\|slot\|tb\)\s*\(.*\)'
+let s:proj.rgex.file='^\(-*\)\s*\%(file\|buff\|bf\)\s*\(.*\)'
+let s:proj.rgex.term='^\(-*\)\s*\%(terminal\|term\|tm\)\s*\(.*\)'
+fu! s:proj.load(...) "{
 
-fu! s:proj.init() "{
+  let tree = {}
+  let rgex = s:{s:flux.synx}.rgex
 
-  let self.tree = {}
+  let tree.name = fnamemodify(s:flux.path,':t')
+  let tree.root = './'
+  let tree.list = []
+  let tree.last = 0
+  let find = self.zero()
 
-endf "}
-fu! s:proj.load() "{
+  let i = 0
 
-  if !self.read()|return 0|endif
-
-  let self.tree.file = self.orig
-  let self.tree.name = fnamemodify(self.tree.file,':t')
-  let self.tree.root = '.'
-  let self.tree.list = []
-  let self.tree.last = 0
-
-  for self.i in range(len(self.lines))
-
-    let line = self.lines[self.i]
-
-    let comment = match(line,'#')
-    if comment + 1|let line = line[0:comment-1]|endif
-    let line = trim(line)
-
-    if !empty(matchstr(line,'^\s*---.*$'))|break|endif
-    if  empty(line)|continue|endif
-
-    " Project File 'name' {
-
-    let self.match = matchlist(line,s:rgex.proj.name)
-    let disabled   = trim(get(self.match,1)) == '-'
-    if !disabled|let self.tree.name=get(self.match,2,self.tree.name)|endif
-
-    " }
-    " Project File 'root' {
-
-    let self.match = matchlist(line,s:rgex.proj.root)
-    let disabled   = trim(get(self.match,1)) == '-'
-    if !disabled|let self.tree.root=get(self.match,2,self.tree.root)|endif
-
-    " }
-    " Project File 'proj' {
-
-    let self.match = matchlist(line,s:rgex.proj.proj)
-    let disabled   = trim(get(self.match,1)) == '-'
-
-    if !disabled && !empty(self.match)|call self.proj()|endif
-
-    " }
-
-  endfor
-
-  unlet self.i
-
-  return 1
-
-endf "}
-fu! s:proj.proj() "{
-
-  let node       = {}
-  let node.list  = []
-  let self.match = split(self.match[2],':')
-  let node.name = (len(self.match)>=1)?trim(self.match[0]):''
-  let node.root = (len(self.match)>=2)?trim(self.match[1]):''
-  let node.last = 0
-
-  for self.p in range(self.i+1,len(self.lines)-1)
-    let line = self.lines[self.p]
-    let self.match = matchlist(line,s:rgex.proj.wksp)
-    if match(line,s:rgex.proj.proj)+1|break
-    elseif !empty(self.match)
-      call add(node.list,self.wksp())
+  while i < s:flux.leng
+    let line = flux#line(s:flux.file[i])
+    if 1+match(line,'^---')|break|endif
+    let s:flux.match = matchlist(line,rgex.name)
+    if !empty(s:flux.match)
+      if s:flux.match[1] == '--'|break|endif
+      if s:flux.match[1] != '-' |let tree.name = s:flux.match[3]|endif
     endif
-  endfor
-
-  unlet self.p
-
-  let self.tree.list+= [node]
-
-endf "}
-fu! s:proj.wksp() "{
-
-  let node       = {}
-  let node.list  = []
-  let self.match = split(self.match[2],':')
-  let node.name = (len(self.match)>=1)?trim(self.match[0]):''
-  let node.root = (len(self.match)>=2)?trim(self.match[1]):''
-  let node.last = 0
-
-  for self.w in range(self.p+1,len(self.lines)-1)
-    let line = self.lines[self.w]
-    let self.match = matchlist(line,s:rgex.proj.tabs)
-    if match(line,s:rgex.proj.wksp)+1|break
-    elseif !empty(self.match)
-      call add(node.list,self.tabs())
+    let s:flux.match = matchlist(line,rgex.root)
+    if !empty(s:flux.match)
+      if s:flux.match[1] == '--'|break|endif
+      if s:flux.match[1] != '-' |let tree.root = s:flux.match[3]|endif
     endif
-  endfor
+    if self.list(line,'proj',tree,[],i,find)|break|endif
+    if self.list(line,'wksp',tree,['proj'],i,find)|break|endif
+    if self.list(line,'slot',tree,['proj','wksp'],i,find)|break|endif
+    if self.list(line,'file',tree,['proj','wksp','slot'],i,find)|break|endif
+    if self.list(line,'term',tree,['proj','wksp','slot'],i,find)|break|endif
+    let i+=1
+  endwhile
 
-  unlet self.w
+  let self.tree = tree
+  return tree
+
+endf "}
+fu! s:proj.proj(...) "{
+
+  let [root,i] = a:000
+
+  let node = self.meta(root)
+  let node.type = 'proj'
+
+  let find = self.zero()
+
+  let i = i+1
+  while i < s:flux.leng
+    let line = flux#line(s:flux.file[i])
+    if 1+match(line,'^---')|break|endif
+    if self.type(line,'proj')|break|endif
+    if self.list(line,'wksp',node,[],i,find)|break|endif
+    if self.list(line,'slot',node,['wksp'],i,find)|break|endif
+    if self.list(line,'file',node,['wksp','slot'],i,find)|break|endif
+    if self.list(line,'term',node,['wksp','slot'],i,find)|break|endif
+    let i+=1
+  endwhile
 
   return node
 
 endf "}
-fu! s:proj.tabs() "{
+fu! s:proj.wksp(...) "{
 
-  let node       = {}
-  let node.list  = []
-  let self.match = split(self.match[2],':')
-  let node.name = (len(self.match)>=1)?trim(self.match[0]):''
-  let node.root = (len(self.match)>=2)?trim(self.match[1]):''
-  let node.last = 0
+  let [root,i] = a:000
 
-  for self.t in range(self.w+1,len(self.lines)-1)
-    let line = self.lines[self.t]
-    let fmatch = matchlist(line,s:rgex.proj.file)
-    let tmatch = matchlist(line,s:rgex.proj.term)
-    if match(line,s:rgex.proj.tabs)+1|break
-    elseif !empty(fmatch)
-      let self.match = fmatch
-      call add(node.list,self.file())
-    elseif !empty(tmatch)
-      let self.match = tmatch
-      call add(node.list,self.term())
+  let node = self.meta(root)
+  let node.type = 'wksp'
+
+  let find = self.zero()
+
+  let i = i+1
+  while i < s:flux.leng
+    let line = flux#line(s:flux.file[i])
+    if 1+match(line,'^---')|break|endif
+    if self.type(line,'wksp')|break|endif
+    if self.list(line,'slot',node,[],i,find)|break|endif
+    if self.list(line,'file',node,['slot'],i,find)|break|endif
+    if self.list(line,'term',node,['slot'],i,find)|break|endif
+    let i+=1
+  endwhile
+
+  return node
+
+endf "}
+fu! s:proj.slot(...) "{
+
+  let [root,i] = a:000
+
+  let node = self.meta(root)
+  let node.type = 'slot'
+
+  let find = self.zero()
+
+  let i = i+1
+  while i < s:flux.leng
+    let line = flux#line(s:flux.file[i])
+    if 1+match(line,'^---')|break|endif
+    if self.type(line,'slot')|break|endif
+    if self.list(line,'file',node,[],i,find)|break|endif
+    if self.list(line,'term',node,[],i,find)|break|endif
+    let i+=1
+  endwhile
+
+  return node
+
+endf "}
+fu! s:proj.file(...) "{
+
+  let [root,i] = a:000
+
+  let node = self.meta(root)
+  let node.file = resolve(node.root)
+  let node.type = 'file'
+  unlet node.root
+  unlet node.last
+  unlet node.list
+  return node
+
+endf "}
+fu! s:proj.term(...) "{
+
+  let [root,i] = a:000
+
+  let node={}
+  let split=split(s:flux.match[2],'@',1)
+  let name = trim(get(split,0,''))
+  let comm = trim(get(split,1,''))
+
+  let split=split(name,'[:=]',1)
+
+  let name = trim(get(split,0,''))
+  let root = trim(get(split,1,''))
+
+  if !empty(root)&&!(1+match(s:flux.match[2],'='))
+    let root = a:000[0].(!empty(a:000[0])?'/':'').root
+  endif
+
+  let node.name = name
+  let node.comm = comm
+  let node.root = empty(root)?'.':resolve(root)
+  let node.type = 'term'
+
+  return node
+
+endf "}
+fu! s:proj.list(...) "{
+
+  let [line,type,node,upper,i,find] = a:000
+
+  let rgex = s:{s:flux.synx}.rgex
+  let foundupper = 0
+
+  for u in upper
+    let foundupper = foundupper||find[u]
+  endfor
+
+  let s:flux.match = matchlist(line,rgex[type])
+  if !empty(s:flux.match) && !foundupper
+    if s:flux.match[1] == '--'|return 1|endif
+    if s:flux.match[1] != '-'
+      call add(node.list,self[type](node.root,i))
     endif
-  endfor
-
-  unlet self.t
-
-  return node
-
-endf "}
-fu! s:proj.file() "{
-
-  let node       = {}
-  let self.match = split(self.match[2],':')
-  let node.name  = (len(self.match)>=1)?trim(self.match[0]):''
-  let node.file  = (len(self.match)>=2)?trim(self.match[1]):''
-
-  return node
+    let find[type] = 1
+    for u in upper
+      let find[u] = 0
+    endfor
+  endif
+  return 0
 
 endf "}
-fu! s:proj.term() "{
-
-  let node       = {}
-  let self.match = split(self.match[2],':')
-  let node.name  = (len(self.match)>=1)?trim(self.match[0]):''
-  let node.comm  = (len(self.match)>=2)?trim(self.match[1]):''
-
+fu! s:proj.meta(...) "{
+  let [root] = a:000
+  let node={}
+  let split=split(s:flux.match[2],'[:=]',1)
+  let node.name=trim(split[0])
+  let node.root = len(split)==1?'':trim(split[1])
+  let node.root = empty(node.root)?'':node.root.'/'
+  if 1+match(s:flux.match[2],':')
+    let node.root = [root.'/'.node.root,node.root][empty(root)]
+  endif
+  let node.list = []
+  let node.last = 0
   return node
-
+endf "}
+fu! s:proj.type(...) "{
+  let [line,type] = a:000
+  return 1+match(line,s:{s:flux.synx}.rgex[type])
+endf "}
+fu! s:proj.zero(...) "{
+  let find = {}
+  let find.proj = 0
+  let find.wksp = 0
+  let find.slot = 0
+  let find.file = 0
+  let find.term = 0
+  return find
 endf "}
 
 " }
-" line plugin syntax {
+" flux {
 
-let s:line = {}
+fu! flux#flux(...) "{
 
-" }
-" iris plugin syntax {
+  let [s:flux.path,s:flux.synx] = a:000
 
-let s:iris = {}
+  let s:flux.file = []
+  try
+    let s:flux.file = readfile(s:flux.path)
+    let s:flux.leng = len(s:flux.file)
+  catch
+    echon 'file: no such file "'.s:flux.path.'"'
+  endtry
+  if !empty(s:flux.file)|return s:{s:flux.synx}.load()|endif
+  return {}
 
-" }
-" imux plugin syntax {
-
-let s:imux = {}
-
-" }
-
-" }
-" objc {
-
-fu! flux#flux() "{
-
-  let self = {}
-  let self.proj = s:proj
-  let self.line = s:line
-  let self.iris = s:iris
-  let self.imux = s:imux
-  call extend(self.proj,file#file())
-  call self.proj.init()
-  return self
-
+endf "}
+fu! flux#line(...) "{
+  let [line] = a:000
+  let comment = match(line,'#')
+  if 1+comment|let line = line[0:comment-1]|endif
+  return trim(line)
 endf "}
 
 " }
